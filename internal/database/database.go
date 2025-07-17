@@ -27,7 +27,7 @@ type GenericDB struct {
 // It currently supports "postgres" and "mysql".
 func NewDBLoader(dsn string) (DBLoader, error) {
 	var driverName string
-	if strings.HasPrefix(dsn, "postgres://") {
+	if strings.HasPrefix(dsn, "postgres://") || strings.HasPrefix(dsn, "postgresql://") {
 		driverName = "postgres"
 	} else if strings.Contains(dsn, "@tcp(") {
 		driverName = "mysql"

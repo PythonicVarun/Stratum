@@ -107,7 +107,7 @@ func (s *Server) createHandler(p config.Project) gin.HandlerFunc {
 		data, err := source.Fetch(idValue)
 		if err != nil {
 			utils.StratumLog("ERROR", "Data source fetch failed for project '%s': %v", p.Name, err)
-			c.String(http.StatusInternalServerError, "Internal Server Error")
+			c.String(http.StatusInternalServerError, "Internal Server Error!")
 			return
 		}
 
@@ -116,13 +116,11 @@ func (s *Server) createHandler(p config.Project) gin.HandlerFunc {
 			return
 		}
 
-		if !bypassCache {
-			err = s.cache.Set(ctx, cacheKey, data, p.CacheTTL)
-			if err != nil {
-				utils.StratumLog("ERROR", "Failed to set cache for key '%s': %v", cacheKey, err)
-			} else {
-				utils.StratumLog("INFO", "CACHE SET: Stored key '%s' with TTL %s.", cacheKey, p.CacheTTL)
-			}
+		err = s.cache.Set(ctx, cacheKey, data, p.CacheTTL)
+		if err != nil {
+			utils.StratumLog("ERROR", "Failed to set cache for key '%s': %v", cacheKey, err)
+		} else {
+			utils.StratumLog("INFO", "CACHE SET: Stored key '%s' with TTL %s.", cacheKey, p.CacheTTL)
 		}
 
 		c.Data(http.StatusOK, p.ContentType, data)

@@ -136,6 +136,16 @@ This source type fetches data from an external API endpoint.
 | `PROJECT_n_CONTENT_TYPE`  | The `Content-Type` HTTP header for the response.                               | `image/png`                                           |
 | `PROJECT_n_CACHE_TTL_SECONDS` | The number of seconds to cache the response. Set to `0` to disable caching. | `300`                                                 |
 
+##### API Authentication
+
+Stratum supports authenticating with the external API. This is configured with the following variables:
+
+| Variable                         | Description                                                                      | Example               |
+|----------------------------------|----------------------------------------------------------------------------------|-----------------------|
+| `PROJECT_n_API_AUTH_TYPE`        | The authentication type. Can be `none`, `bearer`, or `header`. Defaults to `none`. | `bearer`              |
+| `PROJECT_n_API_AUTH_SECRET`      | The secret to use for authentication (e.g., an API key or Bearer token).         | `your-secret-api-key` |
+| `PROJECT_n_API_AUTH_HEADER_NAME` | The name of the HTTP header to use when `API_AUTH_TYPE` is `header`.             | `X-Api-Key`           |
+
 ## ▶️ Running the Application
 
 Once your `.env` file is configured, you can run the server:

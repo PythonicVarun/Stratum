@@ -1,6 +1,7 @@
 package datasource
 
 import (
+	"encoding/base64"
 	"fmt"
 	"io"
 	"net/http"
@@ -26,6 +27,7 @@ func NewDataSource(p config.Project, dbManager *database.ConnectionManager, conf
 		return &DatabaseSource{
 			db:      db,
 			project: p,
+			config:  config,
 		}, nil
 	case "api":
 		return &APISource{
@@ -41,10 +43,63 @@ func NewDataSource(p config.Project, dbManager *database.ConnectionManager, conf
 type DatabaseSource struct {
 	db      database.DBLoader
 	project config.Project
+	config  *config.AppConfig
 }
 
 func (s *DatabaseSource) Fetch(idValue string) ([]byte, error) {
-	return s.db.Fetch(s.project.Table, s.project.IdColumn, s.project.ServeColumn, idValue)
+	data, err := s.db.Fetch(s.project.Table, s.project.IdColumn, s.project.ServeColumn, idValue)
+	if err != nil {
+		return nil, err
+	}
+	if data == nil {
+		return nil, nil
+	}
+
+	content := string(data)
+
+	if strings.HasPrefix(content, "data:") {
+		parts := strings.SplitN(content, ",", 2)
+		if len(parts) == 2 && strings.Contains(parts[0], ";base64") {
+			base64Data := parts[1]
+			decodedData, err := base64.StdEncoding.DecodeString(base64Data)
+			if err == nil {
+				return decodedData, nil
+			}
+		}
+	}
+
+	if strings.HasPrefix(content, "http://") || strings.HasPrefix(content, "https://") {
+		req, err := http.NewRequest("GET", content, nil)
+		if err != nil {
+			return nil, fmt.Errorf("failed to create request for URL %s: %w", content, err)
+		}
+
+		if s.config.ApiClientUserAgent != "" {
+			req.Header.Set("User-Agent", s.config.ApiClientUserAgent)
+		}
+
+		client := &http.Client{}
+		resp, err := client.Do(req)
+		if err != nil {
+			return nil, fmt.Errorf("failed to fetch data from URL %s: %w", content, err)
+		}
+		defer resp.Body.Close()
+
+		if resp.StatusCode != http.StatusOK {
+			if resp.StatusCode == http.StatusNotFound {
+				return nil, nil
+			}
+			return nil, fmt.Errorf("URL fetch returned non-200 status: %d", resp.StatusCode)
+		}
+		return io.ReadAll(resp.Body)
+	}
+
+	decodedData, err := base64.StdEncoding.DecodeString(content)
+	if err == nil {
+		return decodedData, nil
+	}
+
+	return data, nil
 }
 
 type APISource struct {
