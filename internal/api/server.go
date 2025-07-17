@@ -67,7 +67,14 @@ func (s *Server) createHandler(p config.Project) gin.HandlerFunc {
 	}
 
 	return func(c *gin.Context) {
-		idValue := c.Param(p.IdPlaceholder)
+		idValue := strings.TrimPrefix(c.Param(p.IdPlaceholder), "/")
+
+		endPlaceholder := strings.Index(p.Route, "}")
+		if endPlaceholder != -1 && endPlaceholder < len(p.Route)-1 {
+			suffix := p.Route[endPlaceholder+1:]
+			idValue = strings.TrimSuffix(idValue, suffix)
+		}
+
 		if idValue == "" {
 			c.String(http.StatusBadRequest, "ID not found in URL")
 			return
@@ -139,5 +146,19 @@ func (s *Server) Start() {
 
 // Converts a placeholders route (/path/{id}) to a gin-style route (/path/:id).
 func convertToGinRoute(route string) string {
-	return strings.ReplaceAll(strings.ReplaceAll(route, "{", ":"), "}", "")
+	start := strings.Index(route, "{")
+	if start == -1 {
+		return route
+	}
+	end := strings.Index(route, "}")
+	if end == -1 {
+		return route
+	}
+
+	placeholder := route[start+1 : end]
+	if end < len(route)-1 {
+		return route[:start] + "*" + placeholder
+	}
+
+	return route[:start] + ":" + placeholder
 }
