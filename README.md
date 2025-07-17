@@ -26,6 +26,7 @@
 - **⚙️ Environment-Driven**: All configuration is managed via environment variables. No code changes needed to add or modify endpoints.
 - **📦 Caching**: Built-in support for Redis caching with configurable TTLs per route.
 - **⚖️ Scalable**: Designed to be stateless for easy horizontal scaling.
+- **☁️ Cloud-Native**: Ready for deployment on platforms like Docker and Google Cloud Run.
 
 ## 🤔 How It Works
 
@@ -65,6 +66,31 @@ Request ➡️ [Stratum Endpoint] ➡️ Cache Check ❓
     ```bash
     cp .env.example .env
     ```
+
+## ☁️ Deployment
+
+Stratum is designed for modern cloud environments. You can deploy it using Docker or directly to serverless platforms like Google Cloud Run.
+
+### Docker
+
+A `Dockerfile` is included for easy containerization.
+
+1.  **Build the image:**
+    ```bash
+    docker build -t stratum-app .
+    ```
+
+2.  **Run the container:**
+    Make sure to pass your environment variables. You can do this with a `.env` file and the `--env-file` flag.
+    ```bash
+    docker run --env-file ./.env -p 8080:8080 stratum-app
+    ```
+
+### Google Cloud Run
+
+For a scalable, serverless deployment, you can use Google Cloud Run.
+
+See the detailed deployment guide in [`google-cloud-deployment.md`](./google-cloud-deployment.md).
 
 ## 🛠️ Configuration
 

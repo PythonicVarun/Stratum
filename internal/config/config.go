@@ -39,8 +39,14 @@ type AppConfig struct {
 
 // Load scans the environment variables and builds the application configuration.
 func Load() (*AppConfig, error) {
+	// Google Cloud Run sets the PORT environment variable.
+	port := os.Getenv("PORT")
+	if port == "" {
+		port = os.Getenv("SERVER_PORT")
+	}
+
 	appConfig := &AppConfig{
-		ServerPort:         os.Getenv("SERVER_PORT"),
+		ServerPort:         port,
 		RedisURL:           os.Getenv("REDIS_URL"),
 		ApiClientUserAgent: os.Getenv("API_CLIENT_USER_AGENT"),
 	}
