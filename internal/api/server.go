@@ -98,6 +98,7 @@ func (s *Server) createHandler(p config.Project) gin.HandlerFunc {
 				utils.StratumLog("INFO", "CACHE HIT: Serving '%s' from cache.", cacheKey)
 				c.Header("Content-Type", p.ContentType)
 				c.Header("X-Cache-Status", "HIT")
+				c.Header("Cache-Control", fmt.Sprintf("public, max-age=%.0f", p.CacheTTL.Seconds()))
 				c.Data(http.StatusOK, p.ContentType, cachedData)
 				return
 			}
@@ -130,6 +131,7 @@ func (s *Server) createHandler(p config.Project) gin.HandlerFunc {
 			utils.StratumLog("INFO", "CACHE SET: Stored key '%s' with TTL %s.", cacheKey, p.CacheTTL)
 		}
 
+		c.Header("Cache-Control", fmt.Sprintf("public, max-age=%.0f", p.CacheTTL.Seconds()))
 		c.Data(http.StatusOK, p.ContentType, data)
 	}
 }
