@@ -54,6 +54,7 @@ func TestConvertToGinRoute(t *testing.T) {
 		route    string
 		expected string
 	}{
+		{"Root path", "/", "/"},
 		{"Standard placeholder", "/users/{id}", "/users/:id"},
 		{"Placeholder with suffix", "/users/{id}/profile", "/users/*id"},
 		{"No placeholder", "/users", "/users"},
@@ -82,6 +83,21 @@ func TestHealthCheck(t *testing.T) {
 
 	assert.Equal(t, http.StatusOK, w.Code)
 	assert.Equal(t, "OK", w.Body.String())
+}
+
+func TestRootHandler(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	router := gin.New()
+	router.GET("/", func(c *gin.Context) {
+		c.String(http.StatusOK, "Welcome to Stratum!")
+	})
+
+	w := httptest.NewRecorder()
+	req, _ := http.NewRequest("GET", "/", nil)
+	router.ServeHTTP(w, req)
+
+	assert.Equal(t, http.StatusOK, w.Code)
+	assert.Equal(t, "Welcome to Stratum!", w.Body.String())
 }
 
 func TestCreateHandler(t *testing.T) {

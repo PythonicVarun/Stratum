@@ -41,6 +41,11 @@ func NewServer(cfg *config.AppConfig, dbManager *database.ConnectionManager, cac
 
 // Configures the router with all the dynamic project routes.
 func (s *Server) setupRoutes() {
+	// Root endpoint
+	s.router.GET("/", func(c *gin.Context) {
+		c.String(http.StatusOK, "Welcome to Stratum!")
+	})
+
 	// Health check endpoint
 	s.router.GET("/health", func(c *gin.Context) {
 		c.String(http.StatusOK, "OK")

@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"fmt"
 	"log"
+	"regexp"
 	"strings"
 	"sync"
 
@@ -22,6 +23,8 @@ type GenericDB struct {
 	db         *sql.DB
 	driverName string
 }
+
+var validIdentifierRegex = regexp.MustCompile(`^[a-zA-Z0-9_]+$`)
 
 // NewDBLoader creates and returns a new DBLoader instance for the given DSN.
 // It currently supports "postgres" and "mysql".
@@ -53,7 +56,12 @@ func (g *GenericDB) Fetch(table, idColumn, serveColumn, idValue string) ([]byte,
 		return nil, fmt.Errorf("invalid table or column name")
 	}
 
-	query := fmt.Sprintf("SELECT %s FROM %s WHERE %s = ?", serveColumn, table, idColumn)
+	// Securely quote identifiers
+	quotedTable := g.QuoteIdentifier(table)
+	quotedIDColumn := g.QuoteIdentifier(idColumn)
+	quotedServeColumn := g.QuoteIdentifier(serveColumn)
+
+	query := fmt.Sprintf("SELECT %s FROM %s WHERE %s = ?", quotedServeColumn, quotedTable, quotedIDColumn)
 	if g.driverName == "postgres" {
 		query = strings.Replace(query, "?", "$1", 1)
 	}
@@ -76,14 +84,22 @@ func (g *GenericDB) Close() {
 	}
 }
 
+// QuoteIdentifier wraps an identifier in the correct quotes for the database driver.
+func (g *GenericDB) QuoteIdentifier(name string) string {
+	switch g.driverName {
+	case "postgres":
+		return `"` + name + `"`
+	case "mysql":
+		return "`" + name + "`"
+	default:
+		// Fallback for unknown drivers, though we might want to be stricter
+		return name
+	}
+}
+
 // Checks if a string is a valid SQL identifier (table or column name).
 func isValidIdentifier(name string) bool {
-	for _, r := range name {
-		if (r < 'a' || r > 'z') && (r < 'A' || r > 'Z') && (r < '0' || r > '9') && r != '_' {
-			return false
-		}
-	}
-	return name != ""
+	return validIdentifierRegex.MatchString(name)
 }
 
 // ConnectionManager handles multiple database connections.
