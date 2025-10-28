@@ -72,21 +72,32 @@ func (s *Server) createHandler(p config.Project) gin.HandlerFunc {
 	}
 
 	return func(c *gin.Context) {
-		idValue := strings.TrimPrefix(c.Param(p.IdPlaceholder), "/")
+		var idValue string
+		var cacheKey string
 
-		endPlaceholder := strings.Index(p.Route, "}")
-		if endPlaceholder != -1 && endPlaceholder < len(p.Route)-1 {
-			suffix := p.Route[endPlaceholder+1:]
-			idValue = strings.TrimSuffix(idValue, suffix)
-		}
+		// If the project has no placeholder (allowed for API source types),
+		// treat the route as a direct endpoint and do not require an ID in the URL.
+		if p.IdPlaceholder == "" {
+			idValue = ""
+			cacheKey = fmt.Sprintf("%s:direct", p.Name)
+		} else {
+			idValue = strings.TrimPrefix(c.Param(p.IdPlaceholder), "/")
 
-		if idValue == "" {
-			c.String(http.StatusBadRequest, "ID not found in URL")
-			return
+			endPlaceholder := strings.Index(p.Route, "}")
+			if endPlaceholder != -1 && endPlaceholder < len(p.Route)-1 {
+				suffix := p.Route[endPlaceholder+1:]
+				idValue = strings.TrimSuffix(idValue, suffix)
+			}
+
+			if idValue == "" {
+				c.String(http.StatusBadRequest, "ID not found in URL")
+				return
+			}
+
+			cacheKey = fmt.Sprintf("%s:%s", p.Name, idValue)
 		}
 
 		ctx := c.Request.Context()
-		cacheKey := fmt.Sprintf("%s:%s", p.Name, idValue)
 
 		// Check for cache-bypassing headers
 		pragmaHeader := c.GetHeader("Pragma")

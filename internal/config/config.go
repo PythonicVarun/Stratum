@@ -67,10 +67,27 @@ func Load() (*AppConfig, error) {
 			break
 		}
 
-		// Extract placeholder from route
-		idPlaceholder, err := extractIDPlaceholder(route)
-		if err != nil {
-			return nil, fmt.Errorf("invalid route for project %d: %w", i, err)
+		sourceType := os.Getenv(fmt.Sprintf("PROJECT_%d_SOURCE_TYPE", i))
+
+		// Extract placeholder from route only if present. For API source types the
+		// route is allowed to not contain a placeholder (it's a direct endpoint).
+		var idPlaceholder string
+		if strings.Contains(route, "{") {
+			var err error
+			idPlaceholder, err = extractIDPlaceholder(route)
+			if err != nil {
+				return nil, fmt.Errorf("invalid route for project %d: %w", i, err)
+			}
+		} else {
+			if sourceType == "" {
+				sourceType = "database"
+			}
+			if sourceType != "api" {
+				return nil, fmt.Errorf("invalid route for project %d: no '{' found in route", i)
+			}
+
+			// API endpoint to be used directly.
+			idPlaceholder = ""
 		}
 
 		ttlStr := os.Getenv(fmt.Sprintf("PROJECT_%d_CACHE_TTL_SECONDS", i))
@@ -86,7 +103,7 @@ func Load() (*AppConfig, error) {
 			ContentType:   os.Getenv(fmt.Sprintf("PROJECT_%d_CONTENT_TYPE", i)),
 			CacheTTL:      time.Duration(ttl) * time.Second,
 			IdPlaceholder: idPlaceholder,
-			SourceType:    os.Getenv(fmt.Sprintf("PROJECT_%d_SOURCE_TYPE", i)),
+			SourceType:    sourceType,
 		}
 
 		if project.SourceType == "" {
@@ -135,12 +152,14 @@ func Load() (*AppConfig, error) {
 		}
 
 		// Basic validation
-		if project.IdColumn == "" {
-			return nil, fmt.Errorf("missing required configuration (ID_COLUMN) for project %d", i)
-		}
-		// Validate that the placeholder from the route matches the ID column
-		if project.IdPlaceholder != project.IdColumn {
-			return nil, fmt.Errorf("route placeholder {%s} must match ID_COLUMN '%s' for project %d", project.IdPlaceholder, project.IdColumn, i)
+		if project.SourceType != "api" || project.IdPlaceholder != "" {
+			if project.IdColumn == "" {
+				return nil, fmt.Errorf("missing required configuration (ID_COLUMN) for project %d", i)
+			}
+			// Validate that the placeholder from the route matches the ID column
+			if project.IdPlaceholder != project.IdColumn {
+				return nil, fmt.Errorf("route placeholder {%s} must match ID_COLUMN '%s' for project %d", project.IdPlaceholder, project.IdColumn, i)
+			}
 		}
 
 		appConfig.Projects = append(appConfig.Projects, project)
